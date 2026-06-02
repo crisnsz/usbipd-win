@@ -2,10 +2,9 @@
 
 static class BindService
 {
-    public static ExitCode Bind(string instanceId, string description, bool force,
+    public static ExitCode Bind(string instanceId, bool force,
         out bool rebootRequired, List<BindPipeMessage> messages)
     {
-        _ = description;
         rebootRequired = false;
 
         var device = DeviceExtensions.GetAll().FirstOrDefault(
@@ -21,7 +20,7 @@ static class BindService
             UsbipdRegistry.Instance.Persist(device.InstanceId, device.Description);
         }
 
-        if (WindowsDevice.TryCreate(device.InstanceId, out var windowsDevice) && (force != windowsDevice.HasVBoxDriver))
+        if (force != device.IsForced && WindowsDevice.TryCreate(device.InstanceId, out var windowsDevice))
         {
             var reboot = force ? DriverTools.ForceVBoxDriver(windowsDevice) : DriverTools.UnforceVBoxDriver(windowsDevice);
             if (reboot)
