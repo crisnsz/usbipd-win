@@ -1,33 +1,42 @@
+param(
+    [switch]$Build
+)
+
 $ErrorActionPreference = "Stop"
 
 $projectRoot = "D:\projects\usbipd-win"
 $publishPath = "$projectRoot\Usbipd\bin\publish\x64"
 $installerOutput = "$projectRoot\Installer\bin\x64\Release"
 
-Write-Host "Cleaning old build artifacts..." -ForegroundColor Cyan
+if ($Build) {
+    Write-Host "Cleaning old build artifacts..." -ForegroundColor Cyan
 
-Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $publishPath
-Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $installerOutput
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $publishPath
+    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue $installerOutput
 
-Write-Host "Publishing usbipd..." -ForegroundColor Cyan
+    Write-Host "Publishing usbipd..." -ForegroundColor Cyan
 
-dotnet publish "$projectRoot\Usbipd\Usbipd.csproj" `
-    --configuration Debug `
-    --runtime win-x64 `
-    --self-contained true `
-    -p:Platform=x64 `
-    --output $publishPath
+    dotnet publish "$projectRoot\Usbipd\Usbipd.csproj" `
+        --configuration Debug `
+        --runtime win-x64 `
+        --self-contained true `
+        -p:Platform=x64 `
+        --output $publishPath
 
-if (-not (Test-Path $publishPath)) {
-    throw "Publish failed: output folder not found -> $publishPath"
+    if (-not (Test-Path $publishPath)) {
+        throw "Publish failed: output folder not found -> $publishPath"
+    }
+
+    Write-Host "Building installer..." -ForegroundColor Cyan
+
+    dotnet build "$projectRoot\Installer\Installer.wixproj" `
+        --configuration Release `
+        --no-restore `
+        -p:Platform=x64
 }
-
-Write-Host "Building installer..." -ForegroundColor Cyan
-
-dotnet build "$projectRoot\Installer\Installer.wixproj" `
-    --configuration Release `
-    --no-restore `
-    -p:Platform=x64
+else {
+    Write-Host "Build step skipped (use -Build to build before install)." -ForegroundColor DarkYellow
+}
 
 Write-Host "Locating MSI..." -ForegroundColor Cyan
 
@@ -66,7 +75,7 @@ if ($app) {
 
     if ($productCode) {
         Write-Host "Uninstalling MSI product: $productCode" -ForegroundColor Cyan
-        Start-Process "msiexec.exe" -ArgumentList "/x $productCode /qn /norestart" -Wait
+        Start-Process "msiexec.exe" -ArgumentList "/x $productCode /norestart" -Wait
     }
     else {
         Write-Host "Falling back to uninstall string..." -ForegroundColor Yellow
@@ -81,7 +90,7 @@ else {
 
 Write-Host "Installing new version..." -ForegroundColor Cyan
 
-Start-Process "msiexec.exe" -ArgumentList "/i `"$($msiPath.FullName)`" /qn /norestart" -Wait
+Start-Process "msiexec.exe" -ArgumentList "/i `"$($msiPath.FullName)`" /norestart" -Wait
 
 Write-Host "Installation completed." -ForegroundColor Green
 

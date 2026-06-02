@@ -23,7 +23,7 @@ static class BindPipeClient
         }
         catch (UnauthorizedAccessException)
         {
-            console.ReportError($"Access denied; add your account to the 'usbipd_users' local group or run as administrator.");
+            console.ReportError($"Access denied; add your account to the 'usbipd-users' local group or run as administrator.");
             return ExitCode.AccessDenied;
         }
 

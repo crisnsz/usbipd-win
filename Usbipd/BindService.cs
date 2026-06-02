@@ -5,17 +5,23 @@ static class BindService
     public static ExitCode Bind(string instanceId, string description, bool force,
         out bool rebootRequired, List<BindPipeMessage> messages)
     {
+        _ = description;
         rebootRequired = false;
 
-        var isAlreadyPersisted = UsbipdRegistry.Instance.GetBoundDevices()
-            .Any(d => string.Equals(d.InstanceId, instanceId, StringComparison.OrdinalIgnoreCase));
-
-        if (!isAlreadyPersisted)
+        var device = DeviceExtensions.GetAll().FirstOrDefault(
+            d => string.Equals(d.InstanceId, instanceId, StringComparison.OrdinalIgnoreCase));
+        if (device is null)
         {
-            UsbipdRegistry.Instance.Persist(instanceId, description);
+            messages.Add(new(BindPipeMessageLevel.Error, $"There is no USB device with instance id '{instanceId}'."));
+            return ExitCode.Failure;
         }
 
-        if (WindowsDevice.TryCreate(instanceId, out var windowsDevice) && (force != windowsDevice.HasVBoxDriver))
+        if (device.PersistedGuid is null)
+        {
+            UsbipdRegistry.Instance.Persist(device.InstanceId, device.Description);
+        }
+
+        if (WindowsDevice.TryCreate(device.InstanceId, out var windowsDevice) && (force != windowsDevice.HasVBoxDriver))
         {
             var reboot = force ? DriverTools.ForceVBoxDriver(windowsDevice) : DriverTools.UnforceVBoxDriver(windowsDevice);
             if (reboot)
