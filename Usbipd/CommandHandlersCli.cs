@@ -155,25 +155,6 @@ sealed partial class CommandHandlers : ICommandHandlers
 #pragma warning restore CA1849 // Call async methods when in an async method
     }
 
-    static void RelayMessages(IEnumerable<BindPipeMessage> messages, IConsole console)
-    {
-        foreach (var msg in messages)
-        {
-            switch (msg.Level)
-            {
-                case BindPipeMessageLevel.Info:
-                    console.ReportInfo(msg.Text);
-                    break;
-                case BindPipeMessageLevel.Warning:
-                    console.ReportWarning(msg.Text);
-                    break;
-                case BindPipeMessageLevel.Error:
-                    console.ReportError(msg.Text);
-                    break;
-            }
-        }
-    }
-
     static async Task<ExitCode> BindAsync(BusId busId, bool force, IConsole console, CancellationToken cancellationToken)
     {
         var device = DeviceExtensions.GetAll().SingleOrDefault(d => d.BusId.HasValue && d.BusId.Value == busId);
@@ -199,13 +180,12 @@ sealed partial class CommandHandlers : ICommandHandlers
         if (UsbipdRegistry.Instance.HasWriteAccess)
         {
             var messages = new List<BindPipeMessage>();
-            exitCode = BindService.Bind(device.InstanceId, device.Description, force, out rebootRequired, messages);
-            RelayMessages(messages, console);
+            exitCode = BindService.Bind(device.InstanceId, force, out rebootRequired, messages);
+            messages.Relay(console);
         }
         else
         {
-            exitCode = await BindPipeClient.BindAsync(device.InstanceId, device.Description, force, console, cancellationToken);
-            rebootRequired = false;
+            (exitCode, rebootRequired) = await BindPipeClient.BindAsync(device.InstanceId, force, console, cancellationToken);
         }
 
         if (exitCode == ExitCode.Success)
@@ -273,12 +253,11 @@ sealed partial class CommandHandlers : ICommandHandlers
         {
             var messages = new List<BindPipeMessage>();
             exitCode = BindService.Unbind(guid, out rebootRequired, messages);
-            RelayMessages(messages, console);
+            messages.Relay(console);
         }
         else
         {
-            exitCode = await BindPipeClient.UnbindAsync(guid, console, cancellationToken);
-            rebootRequired = false;
+            (exitCode, rebootRequired) = await BindPipeClient.UnbindAsync(guid, console, cancellationToken);
         }
 
         if (exitCode == ExitCode.Success && rebootRequired)
@@ -363,12 +342,11 @@ sealed partial class CommandHandlers : ICommandHandlers
         {
             var messages = new List<BindPipeMessage>();
             exitCode = BindService.UnbindAll(out rebootRequired, messages);
-            RelayMessages(messages, console);
+            messages.Relay(console);
         }
         else
         {
-            exitCode = await BindPipeClient.UnbindAllAsync(console, cancellationToken);
-            rebootRequired = false;
+            (exitCode, rebootRequired) = await BindPipeClient.UnbindAllAsync(console, cancellationToken);
         }
 
         if (exitCode == ExitCode.Success && rebootRequired)

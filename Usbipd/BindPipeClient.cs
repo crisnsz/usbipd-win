@@ -5,7 +5,7 @@ namespace Usbipd;
 
 static class BindPipeClient
 {
-    static async Task<ExitCode> SendAsync(
+    static async Task<(ExitCode exitCode, bool rebootRequired)> SendAsync(
         Action<BinaryWriter> writeRequest, IConsole console, CancellationToken cancellationToken)
     {
         using var pipe = new NamedPipeClientStream(
@@ -19,12 +19,12 @@ static class BindPipeClient
         catch (TimeoutException)
         {
             console.ReportError("Cannot connect to the service; ensure the usbipd service is running.");
-            return ExitCode.Failure;
+            return (ExitCode.Failure, false);
         }
         catch (UnauthorizedAccessException)
         {
             console.ReportError($"Access denied; add your account to the 'usbipd-users' local group or run as administrator.");
-            return ExitCode.AccessDenied;
+            return (ExitCode.AccessDenied, false);
         }
 
         using var writer = new BinaryWriter(pipe, System.Text.Encoding.UTF8, leaveOpen: true);
@@ -38,46 +38,31 @@ static class BindPipeClient
         var rebootRequired = reader.ReadBoolean();
         var messageCount = reader.ReadByte();
 
+        var messages = new List<BindPipeMessage>(messageCount);
         for (var i = 0; i < messageCount; i++)
         {
             var level = (BindPipeMessageLevel)reader.ReadByte();
             var text = reader.ReadString();
-            switch (level)
-            {
-                case BindPipeMessageLevel.Info:
-                    console.ReportInfo(text);
-                    break;
-                case BindPipeMessageLevel.Warning:
-                    console.ReportWarning(text);
-                    break;
-                case BindPipeMessageLevel.Error:
-                    console.ReportError(text);
-                    break;
-            }
+            messages.Add(new(level, text));
         }
+        messages.Relay(console);
 
-        if (rebootRequired)
-        {
-            console.ReportRebootRequired();
-        }
-
-        return exitCode;
+        return (exitCode, rebootRequired);
     }
 
-    public static Task<ExitCode> BindAsync(
-        string instanceId, string description, bool force,
+    public static Task<(ExitCode exitCode, bool rebootRequired)> BindAsync(
+        string instanceId, bool force,
         IConsole console, CancellationToken cancellationToken)
     {
         return SendAsync(w =>
         {
             w.Write((byte)BindPipeCommand.Bind);
             w.Write(instanceId);
-            w.Write(description);
             w.Write(force);
         }, console, cancellationToken);
     }
 
-    public static Task<ExitCode> UnbindAsync(
+    public static Task<(ExitCode exitCode, bool rebootRequired)> UnbindAsync(
         Guid guid,
         IConsole console, CancellationToken cancellationToken)
     {
@@ -88,7 +73,7 @@ static class BindPipeClient
         }, console, cancellationToken);
     }
 
-    public static Task<ExitCode> UnbindAllAsync(
+    public static Task<(ExitCode exitCode, bool rebootRequired)> UnbindAllAsync(
         IConsole console, CancellationToken cancellationToken)
     {
         return SendAsync(w =>

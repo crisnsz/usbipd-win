@@ -208,9 +208,9 @@ sealed partial class BindPipeServer : BackgroundService
                 pipe,
                 ExitCode.AccessDenied,
                 rebootRequired: false,
-                new[] { new BindPipeMessage(
+                [new BindPipeMessage(
                     BindPipeMessageLevel.Error,
-                    $"Access denied; add your account to the '{BindPipeProtocol.PipeGroupName}' local group or run as administrator.") },
+                    $"Access denied; add your account to the '{BindPipeProtocol.PipeGroupName}' local group or run as administrator.")],
                 stoppingToken);
             return;
         }
@@ -222,7 +222,6 @@ sealed partial class BindPipeServer : BackgroundService
         var command = (BindPipeCommand)await ReadByteAsync(pipe, readToken);
 
         string? instanceId = null;
-        string? description = null;
         var force = false;
         Guid guid = default;
 
@@ -230,7 +229,6 @@ sealed partial class BindPipeServer : BackgroundService
         {
             case BindPipeCommand.Bind:
                 instanceId = await ReadStringAsync(pipe, BindPipeProtocol.MaxStringByteLength, readToken);
-                description = await ReadStringAsync(pipe, BindPipeProtocol.MaxStringByteLength, readToken);
                 force = await ReadByteAsync(pipe, readToken) != 0;
                 break;
             case BindPipeCommand.Unbind:
@@ -246,7 +244,7 @@ sealed partial class BindPipeServer : BackgroundService
                     pipe,
                     ExitCode.Failure,
                     rebootRequired: false,
-                    new[] { new BindPipeMessage(BindPipeMessageLevel.Error, "Unknown bind command.") },
+                    [new BindPipeMessage(BindPipeMessageLevel.Error, "Unknown bind command.")],
                     stoppingToken);
                 return;
         }
@@ -261,7 +259,7 @@ sealed partial class BindPipeServer : BackgroundService
             switch (command)
             {
                 case BindPipeCommand.Bind:
-                    exitCode = BindService.Bind(instanceId!, description!, force, out rebootRequired, messages);
+                    exitCode = BindService.Bind(instanceId!, force, out rebootRequired, messages);
                     break;
                 case BindPipeCommand.Unbind:
                     exitCode = BindService.Unbind(guid, out rebootRequired, messages);
@@ -337,7 +335,7 @@ sealed partial class BindPipeServer : BackgroundService
 
     static async Task WriteResponseAsync(
         Stream stream, ExitCode exitCode, bool rebootRequired,
-        IReadOnlyList<BindPipeMessage> messages, CancellationToken cancellationToken)
+        List<BindPipeMessage> messages, CancellationToken cancellationToken)
     {
         using var ms = new MemoryStream();
         using (var bw = new BinaryWriter(ms, Encoding.UTF8, leaveOpen: true))
