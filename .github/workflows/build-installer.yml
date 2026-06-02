@@ -85,20 +85,21 @@ jobs:
           subject-name: artifacts.zip
           subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
 
-      - name: Upload test results to Codecov
-        if: ${{ !cancelled() }}
-        uses: codecov/codecov-action@v6
-        with:
-          fail_ci_if_error: true
-          report_type: test_results
-          files: '**/TestResults/TestResults.xml'
-          disable_search: true
-          token: ${{ secrets.CODECOV_TOKEN }}
+      # TODO: configure CODECOV_TOKEN secret to enable coverage reporting
+      # - name: Upload test results to Codecov
+      #   if: ${{ !cancelled() }}
+      #   uses: codecov/codecov-action@v6
+      #   with:
+      #     fail_ci_if_error: true
+      #     report_type: test_results
+      #     files: '**/TestResults/TestResults.xml'
+      #     disable_search: true
+      #     token: ${{ secrets.CODECOV_TOKEN }}
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v6
-        with:
-          fail_ci_if_error: true
-          files: '**/TestResults/coverage.cobertura.xml'
-          disable_search: true
-          token: ${{ secrets.CODECOV_TOKEN }}
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v6
+      #   with:
+      #     fail_ci_if_error: true
+      #     files: '**/TestResults/coverage.cobertura.xml'
+      #     disable_search: true
+      #     token: ${{ secrets.CODECOV_TOKEN }}
