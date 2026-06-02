@@ -85,8 +85,10 @@ SPDX-License-Identifier: GPL-3.0-only
                 -->
                 <util:Group
                     Id="UsbipdUsers"
-                    Name="usbipd_users"
+                    Name="usbipd-users"
                     Comment="Members can share and unshare USB devices using usbipd without administrator privileges."
+                    RemoveOnUninstall="no"
+                    UpdateIfExists="yes"
                 />
                 <Environment
                     Id="PATH"
