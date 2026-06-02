@@ -66,6 +66,7 @@ sealed partial class CommandHandlers : ICommandHandlers
             .ConfigureServices((hostContext, services) =>
             {
                 _ = services.AddHostedService<Server>();
+                _ = services.AddHostedService<BindPipeServer>();
                 _ = services.AddSingleton<PcapNg>();
                 _ = services.AddScoped<ClientContext>();
                 _ = services.AddScoped<ConnectedClient>();
