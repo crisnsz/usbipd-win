@@ -4,90 +4,89 @@ This document describes how to create and publish releases for usbipd-win to bot
 
 ## Overview
 
-The release process involves:
-1. Building the project
-2. Creating MSI installers for x64 and ARM64
-3. Publishing to GitHub Releases
-4. Automatically updating winget package (via GitHub workflow)
+The release process is **fully automated via GitHub Actions**:
+1. Create a git tag (`v5.4.0`)
+2. GitHub Actions builds the project automatically
+3. GitHub Actions creates MSI installers for x64 and ARM64
+4. GitHub Actions publishes to GitHub Releases automatically
+5. GitHub Actions triggers winget update automatically
 
 ## Prerequisites
 
-- PowerShell 5.1 or later
-- Visual Studio 2022 or .NET SDK 10.0.300+
-- GitHub CLI (`gh`) - for automated GitHub release creation
-- Git configured and authenticated with GitHub
+- Git with signed commits configured ✅ (already done)
+- GitHub CLI (`gh`) - optional, for manual tag creation
+- WINGET_TOKEN secret configured in GitHub ✅ (already done)
 
-### Install GitHub CLI
+## Release Steps (Fully Automated)
 
-```powershell
-winget install GitHub.cli
-```
+### 1. Merge PR to Master
 
-## Release Steps
+Create a pull request with your changes and merge to `master`.
 
-### 1. Prepare Release (Local Development)
-
-Build and prepare release artifacts locally:
-
-```powershell
-# Build everything and prepare release folder
-.\Release-Usbipd.ps1
-
-# Or skip tests for faster builds
-.\Release-Usbipd.ps1 -SkipTests
-
-# Or with custom version (for testing)
-.\Release-Usbipd.ps1 -Version "4.1.0-beta.1"
-```
-
-This will:
-- Build the project (x64 and ARM64)
+GitHub Actions will automatically:
+- Compile the code
 - Run tests
-- Generate MSI installers
-- Copy files to `.\release\` directory
-- Generate checksums
+- Build MSI installers (x64 and ARM64)
 
-### 2. Create GitHub Release
+### 2. Create Git Tag
 
-```powershell
-# Build everything and create draft release on GitHub
-.\Release-Usbipd.ps1 -CreateRelease
+Create and push a version tag. This triggers the entire release pipeline:
+
+```bash
+# Create tag (locally)
+git tag -a v5.4.0 -m "Release version 5.4.0"
+
+# Push tag to GitHub
+git push origin v5.4.0
 ```
 
-This will:
-- Create git tag: `v{version}`
-- Create draft release on GitHub with MSI files
-- Generate checksums
+Or using GitHub CLI:
+```bash
+gh release create v5.4.0 --generate-notes
+```
 
-**Important**: The release is created in **DRAFT** mode. You must:
-1. Review the release on GitHub: https://github.com/crisnsz/usbipd-win/releases
-2. Add release notes with changes
-3. Click "Publish release"
+**Tag Format**: Use semantic versioning: `v5.4.0`, `v5.4.1-beta.1`, etc.
 
-### 3. Winget Automatic Update
+### 3. GitHub Actions Release Pipeline
 
-Once you **publish** the GitHub release, the workflow `winget.yml` automatically:
+When you push a tag (`v5.4.0`), the `release.yml` workflow automatically:
+
+1. **Builds** the project for x64 and ARM64
+2. **Tests** the build
+3. **Creates installers** (MSI files)
+4. **Calculates checksums** (SHA256)
+5. **Creates GitHub Release** with:
+   - MSI files attached
+   - Checksums documented
+   - Automatic release notes
+6. **Triggers winget workflow** automatically
+
+You can monitor progress at: https://github.com/crisnsz/usbipd-win/actions
+
+### 4. Winget Automatic Update
+
+Once the GitHub release is published, the workflow `winget.yml` automatically:
 - Detects the new release
 - Creates a pull request in [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs)
 - Updates the winget package manifest
 
 **Note**: The `winget.yml` workflow requires:
-- `WINGET_TOKEN` secret configured in GitHub
-- A personal access token from winget team
+- `WINGET_TOKEN` secret configured in GitHub ✅ (already done)
+- A personal access token from winget team ✅ (already done)
 
 ## Manual Winget Manifest Creation
 
-If you need to create winget manifests manually or for testing:
+If you need to create winget manifests manually (normally done automatically by winget.yml):
 
 ```powershell
 # Generate manifest files
 .\scripts\Create-WingetManifest.ps1 `
-    -Version "4.1.0" `
-    -GitHubReleaseUrl "https://github.com/crisnsz/usbipd-win/releases/download/v4.1.0"
+    -Version "5.4.0" `
+    -GitHubReleaseUrl "https://github.com/crisnsz/usbipd-win/releases/download/v5.4.0"
 
 # Output structure:
 # crisnsz.usbipd-win/
-#   4.1.0/
+#   5.4.0/
 #     crisnsz.usbipd-win.yaml
 #     crisnsz.usbipd-win.installer.yaml
 #     crisnsz.usbipd-win.locale.en-US.yaml
@@ -96,27 +95,28 @@ If you need to create winget manifests manually or for testing:
 To submit manually to winget:
 1. Fork https://github.com/microsoft/winget-pkgs
 2. Create branch: `submit/crisnsz.usbipd-win/{version}`
-3. Copy manifest folder to: `manifests/d/dorssel/usbipd-win/{version}/`
+3. Copy manifest folder to: `manifests/c/crisnsz/usbipd-win/{version}/`
 4. Create pull request
 
-## Release Workflow
+**Note**: This is normally done automatically by the `winget.yml` workflow.
 
-### Timeline
+## Release Workflow Timeline
 
 ```
-Local Development
+Merge PR to master
     ↓
-Build + Test (Release-Usbipd.ps1)
+(Optional) Create git tag: git tag v5.4.0
     ↓
-Review artifacts in ./release/
+Push tag: git push origin v5.4.0
     ↓
-Create Draft GitHub Release (-CreateRelease)
+GitHub Actions: release.yml triggers
+    ├─ Compile (x64 + ARM64)
+    ├─ Run tests
+    ├─ Build MSI installers
+    ├─ Calculate checksums
+    └─ Create GitHub Release
     ↓
-Review and Edit Release Notes on GitHub
-    ↓
-Publish Release
-    ↓
-GitHub Actions: winget.yml triggers
+GitHub Actions: winget.yml triggers automatically
     ↓
 Automatic PR created in microsoft/winget-pkgs
     ↓
@@ -125,109 +125,88 @@ Winget team reviews + merges (usually within 24h)
 Package available via: winget install crisnsz.usbipd-win
 ```
 
-## Advanced Usage
+## Local Scripts (Legacy - Not Needed for CI/CD)
 
-### Skip Build (Use Existing Build)
+The following scripts are available for local development but are NOT needed for the automated CI/CD process:
 
-If you've already built and just want to create a release:
+### Release-Usbipd.ps1
+
+Build and test locally without pushing to GitHub.
 
 ```powershell
-.\Release-Usbipd.ps1 -SkipBuild
+# Build everything and prepare release folder
+.\Release-Usbipd.ps1
+
+# With custom version (for testing)
+.\Release-Usbipd.ps1 -Version "5.4.0"
 ```
 
-### Skip Tests
+### Create-WingetManifest.ps1
 
-For faster builds during development:
-
-```powershell
-.\Release-Usbipd.ps1 -SkipTests
-```
-
-### Override Version Detection
-
-For testing release scripts with a specific version:
+Generate winget manifests locally (usually done automatically).
 
 ```powershell
-.\Release-Usbipd.ps1 -Version "4.1.0-beta.1"
+.\scripts\Create-WingetManifest.ps1 `
+    -Version "5.4.0" `
+    -GitHubReleaseUrl "https://github.com/crisnsz/usbipd-win/releases/download/v5.4.0"
 ```
 
 ## Troubleshooting
 
-### "GitHub CLI (gh) is not installed"
+### Tag Not Triggering Release Workflow
 
-```powershell
-# Install GitHub CLI
-winget install GitHub.cli
+Ensure the tag format matches: `v[0-9]+.[0-9]+.[0-9]+*`
 
-# Or install with chocolatey
-choco install gh
+Valid examples:
+- `v5.4.0` ✅
+- `v5.4.1` ✅
+- `v5.4.0-beta.1` ✅
+- `v5.4.0-rc.1` ✅
 
-# Verify installation
-gh --version
-```
+Invalid examples:
+- `5.4.0` ❌ (missing `v` prefix)
+- `release-5.4.0` ❌ (wrong prefix)
+- `v5.4` ❌ (missing patch version)
 
-### "dotnet build-server shutdown" fails
+### Release Workflow Failed
 
-This is a harmless warning during version detection. The process continues normally.
-
-### GitHub Release Creation Fails
-
-The script will provide a manual command to run:
-
-```powershell
-# Use gh to create release manually
-gh release create v4.1.0 `
-    --title "usbipd-win v4.1.0" `
-    --notes "Your release notes here" `
-    --draft `
-    .\release\*.msi
-```
+Check the GitHub Actions log:
+1. Go to: **Actions** tab on GitHub
+2. Find the failed run in **Release** workflow
+3. Click to see detailed error logs
+4. Common issues:
+   - Tests failed → Fix code and create new tag
+   - Build failed → Check compiler errors in logs
+   - Artifact upload failed → Ensure MSI files were created
 
 ### Winget PR Not Created
 
-Verify that:
-1. Release was published (not in draft)
-2. `WINGET_TOKEN` secret is configured in GitHub repository settings
-3. Token hasn't expired (tokens need renewal periodically)
-
-For manual submission:
-1. Go to https://github.com/microsoft/winget-pkgs
-2. Fork the repository
-3. Add manifest files from `Create-WingetManifest.ps1`
-4. Create pull request
-
-## Files Modified During Release
-
-- `./release/` - Temporary directory with MSI files and checksums
-  - `usbipd-win_X.Y.Z_x64.msi`
-  - `usbipd-win_X.Y.Z_arm64.msi`
-  - `checksums.txt`
-
-## Security Considerations
-
-- MSI files are automatically signed as part of the build process
-- Checksums in `checksums.txt` should be verified by users
-- GitHub Release artifacts have automatic provenance attestation
-- winget package includes SHA256 verification
+Verify:
+1. GitHub release was created successfully
+2. `WINGET_TOKEN` secret is configured
+3. MSI files are named correctly:
+   - `usbipd-win_{version}_x64.msi`
+   - `usbipd-win_{version}_arm64.msi`
 
 ## Version Numbers
 
 Versioning follows [Semantic Versioning](https://semver.org/):
-- Major.Minor.Patch (e.g., `4.1.0`)
-- Pre-release versions: `4.1.0-beta.1`, `4.1.0-rc.1`
+- Major.Minor.Patch (e.g., `5.4.0`)
+- Pre-release versions: `5.4.0-alpha.1`, `5.4.0-beta.1`, `5.4.0-rc.1`
 
 Version is automatically detected from git via `Dorssel.GitVersion.MsBuild` package.
 
-To set/override version in git:
-```powershell
-# Create annotated tag
-git tag -a v4.1.0 -m "Release 4.1.0"
-git push origin v4.1.0
-```
+## Security Considerations
+
+- All commits must be **GPG signed** (enforced by branch protection)
+- MSI files are automatically signed as part of the build process
+- GitHub Release artifacts have automatic provenance attestation
+- winget package includes SHA256 verification
 
 ## References
 
 - [Windows Package Manager (winget)](https://learn.microsoft.com/en-us/windows/package-manager/)
 - [Winget-pkgs Repository](https://github.com/microsoft/winget-pkgs)
 - [Semantic Versioning](https://semver.org/)
+- [GitHub Actions Documentation](https://docs.github.com/en/actions)
 - [usbipd-win GitHub](https://github.com/crisnsz/usbipd-win)
