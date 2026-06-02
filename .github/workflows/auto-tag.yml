@@ -1,0 +1,76 @@
+# SPDX-FileCopyrightText: 2026 crisnsz
+#
+# SPDX-License-Identifier: GPL-3.0-only
+
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Auto Tag
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to tag (e.g. 5.4.0). Leave empty to auto-detect.'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine Version
+        id: version
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+            echo "Using manual version: $VERSION"
+          else
+            # Instalar GitVersion CLI
+            dotnet tool install --global GitVersion.Tool --version 6.* 2>/dev/null || true
+            VERSION=$(dotnet-gitversion /showvariable MajorMinorPatch 2>/dev/null)
+            echo "Auto-detected version: $VERSION"
+          fi
+
+          TAG="v${VERSION}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Check Tag Exists
+        id: check
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          if git tag --list | grep -q "^${TAG}$"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Tag $TAG already exists, skipping."
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "Tag $TAG does not exist, will create."
+          fi
+
+      - name: Create and Push Tag
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          TAG="${{ steps.version.outputs.tag }}"
+          VERSION="${{ steps.version.outputs.version }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git tag -a "$TAG" -m "Release $VERSION"
+          git push origin "$TAG"
+
+          echo "✅ Tag $TAG created and pushed"
+          echo "release.yml will now trigger automatically"
