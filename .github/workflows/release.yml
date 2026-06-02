@@ -122,6 +122,12 @@ jobs:
           name: msi-installers
           path: artifacts
 
+      - name: Flatten Artifacts
+        run: |
+          find artifacts -name "*.msi" -exec mv {} artifacts/ \;
+          echo "MSI files found:"
+          ls artifacts/*.msi
+
       - name: Create Release Notes
         id: notes
         run: |
