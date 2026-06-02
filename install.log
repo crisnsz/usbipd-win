@@ -1,0 +1,17 @@
+=== Verbose logging started: 4/26/2026  23:33:02  Build type: SHIP UNICODE 5.00.10011.00  Calling process: C:\WINDOWS\system32\msiexec.exe ===
+MSI (c) (C8:10) [23:33:02:142]: Font created.  Charset: Req=0, Ret=0, Font: Req=MS Shell Dlg, Ret=MS Shell Dlg
+
+MSI (c) (C8:10) [23:33:02:143]: Font created.  Charset: Req=0, Ret=0, Font: Req=MS Shell Dlg, Ret=MS Shell Dlg
+
+MSI (c) (C8:B8) [23:33:02:181]: Resetting cached policy values
+MSI (c) (C8:B8) [23:33:02:181]: Machine policy value 'Debug' is 0
+MSI (c) (C8:B8) [23:33:02:181]: ******* RunEngine:
+           ******* Product: .\Installer\bin\x64\Release\usbipd-win_1.0.0_x64.msi
+           ******* Action: 
+           ******* CommandLine: **********
+MSI (c) (C8:B8) [23:33:02:183]: Machine policy value 'DisableUserInstalls' is 0
+MSI (c) (C8:B8) [23:33:02:233]: Note: 1: 1402 2: HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Policies\Explorer 3: 2 
+MSI (c) (C8:B8) [23:33:02:233]: Note: 1: 1324 2: . 3: 1 
+MSI (c) (C8:B8) [23:33:02:233]: MainEngineThread is returning 2
+=== Verbose logging stopped: 4/26/2026  23:33:02 ===
+

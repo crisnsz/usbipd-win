@@ -155,7 +155,7 @@ sealed partial class CommandHandlers : ICommandHandlers
 #pragma warning restore CA1849 // Call async methods when in an async method
     }
 
-    static ExitCode Bind(BusId busId, bool force, IConsole console)
+    static async Task<ExitCode> BindAsync(BusId busId, bool force, IConsole console, CancellationToken cancellationToken)
     {
         var device = DeviceExtensions.GetAll().SingleOrDefault(d => d.BusId.HasValue && d.BusId.Value == busId);
         if (device is null)
@@ -173,32 +173,35 @@ sealed partial class CommandHandlers : ICommandHandlers
             }
             return ExitCode.Success;
         }
-        if (!CheckWriteAccess(console))
+
+        ExitCode exitCode;
+        bool rebootRequired;
+
+        if (UsbipdRegistry.Instance.HasWriteAccess)
         {
-            return ExitCode.AccessDenied;
+            var messages = new List<BindPipeMessage>();
+            exitCode = BindService.Bind(device.InstanceId, force, out rebootRequired, messages);
+            messages.Relay(console);
         }
-        if (!device.PersistedGuid.HasValue)
+        else
         {
-            UsbipdRegistry.Instance.Persist(device.InstanceId, device.Description);
+            (exitCode, rebootRequired) = await BindPipeClient.BindAsync(device.InstanceId, force, console, cancellationToken);
         }
-        if (!force)
+
+        if (exitCode == ExitCode.Success)
         {
-            // Do not warn that force may be needed if the user is actually using --force.
-            console.ReportIfForceNeeded();
-        }
-        if (force != device.IsForced)
-        {
-            // Switch driver.
-            if (WindowsDevice.TryCreate(device.InstanceId, out var windowsDevice))
+            if (rebootRequired)
             {
-                if (force ? DriverTools.ForceVBoxDriver(windowsDevice) : DriverTools.UnforceVBoxDriver(windowsDevice))
-                {
-                    console.ReportRebootRequired();
-                }
+                console.ReportRebootRequired();
             }
+            if (!force)
+            {
+                console.ReportIfForceNeeded();
+            }
+            _ = console.CheckAndReportServerRunning(false);
         }
-        _ = console.CheckAndReportServerRunning(false);
-        return ExitCode.Success;
+
+        return exitCode;
     }
 
     Task<ExitCode> ICommandHandlers.Bind(BusId busId, bool force, IConsole console, CancellationToken cancellationToken)
@@ -208,7 +211,7 @@ sealed partial class CommandHandlers : ICommandHandlers
             return Task.FromResult(ExitCode.Failure);
         }
 
-        return Task.FromResult(Bind(busId, force, console));
+        return BindAsync(busId, force, console, cancellationToken);
     }
 
     Task<ExitCode> ICommandHandlers.Bind(VidPid vidPid, bool force, IConsole console, CancellationToken cancellationToken)
@@ -219,8 +222,50 @@ sealed partial class CommandHandlers : ICommandHandlers
         }
 
         return GetBusIdByHardwareId(vidPid, console) is BusId busId
-            ? Task.FromResult(Bind(busId, force, console))
+            ? BindAsync(busId, force, console, cancellationToken)
             : Task.FromResult(ExitCode.Failure);
+    }
+
+    static async Task<ExitCode> UnbindBusIdAsync(BusId busId, IConsole console, CancellationToken cancellationToken)
+    {
+        var device = DeviceExtensions.GetAll().SingleOrDefault(d => d.BusId.HasValue && d.BusId.Value == busId);
+        if (device is null)
+        {
+            console.ReportError($"There is no device with busid '{busId}'.");
+            return ExitCode.Failure;
+        }
+        if (device.PersistedGuid is null)
+        {
+            // Not an error, just let the user know they just executed a no-op.
+            console.ReportInfo($"Device with busid '{busId}' was already not shared.");
+            return ExitCode.Success;
+        }
+
+        return await UnbindGuidAsync(device.PersistedGuid.Value, console, cancellationToken);
+    }
+
+    static async Task<ExitCode> UnbindGuidAsync(Guid guid, IConsole console, CancellationToken cancellationToken)
+    {
+        ExitCode exitCode;
+        bool rebootRequired;
+
+        if (UsbipdRegistry.Instance.HasWriteAccess)
+        {
+            var messages = new List<BindPipeMessage>();
+            exitCode = BindService.Unbind(guid, out rebootRequired, messages);
+            messages.Relay(console);
+        }
+        else
+        {
+            (exitCode, rebootRequired) = await BindPipeClient.UnbindAsync(guid, console, cancellationToken);
+        }
+
+        if (exitCode == ExitCode.Success && rebootRequired)
+        {
+            console.ReportRebootRequired();
+        }
+
+        return exitCode;
     }
 
     Task<ExitCode> ICommandHandlers.Unbind(BusId busId, IConsole console, CancellationToken cancellationToken)
@@ -230,88 +275,7 @@ sealed partial class CommandHandlers : ICommandHandlers
             return Task.FromResult(ExitCode.Failure);
         }
 
-        var device = DeviceExtensions.GetAll().SingleOrDefault(d => d.BusId.HasValue && d.BusId.Value == busId);
-        if (device is null)
-        {
-            console.ReportError($"There is no device with busid '{busId}'.");
-            return Task.FromResult(ExitCode.Failure);
-        }
-        if (device.PersistedGuid is null)
-        {
-            // Not an error, just let the user know they just executed a no-op.
-            console.ReportInfo($"Device with busid '{busId}' was already not shared.");
-            return Task.FromResult(ExitCode.Success);
-        }
-        if (!CheckWriteAccess(console))
-        {
-            return Task.FromResult(ExitCode.AccessDenied);
-        }
-        UsbipdRegistry.Instance.StopSharingDevice(device.PersistedGuid.Value);
-        if (WindowsDevice.TryCreate(device.InstanceId, out var windowsDevice))
-        {
-            if (DriverTools.UnforceVBoxDriver(windowsDevice))
-            {
-                console.ReportRebootRequired();
-            }
-        }
-        return Task.FromResult(ExitCode.Success);
-    }
-
-    static ExitCode Unbind(IEnumerable<Device> devices, IConsole console)
-    {
-        if (!CheckInstalled(console))
-        {
-            return ExitCode.Failure;
-        }
-
-        // Unbind acts as a cleanup and has to support partially failed binds.
-
-        var deviceList = devices.ToList();
-        if (deviceList.Count == 0)
-        {
-            // This would result in a no-op, which may not be what the user intended.
-            return ExitCode.Failure;
-        }
-        if (!CheckWriteAccess(console))
-        {
-            // We don't actually know if there is anything to clean up, but if there is
-            // then administrator privileges are required.
-            return ExitCode.AccessDenied;
-        }
-        var reboot = false;
-        var driverError = false;
-        foreach (var device in deviceList)
-        {
-            if (device.PersistedGuid is not null)
-            {
-                UsbipdRegistry.Instance.StopSharingDevice(device.PersistedGuid.Value);
-            }
-            if (WindowsDevice.TryCreate(device.InstanceId, out var windowsDevice))
-            {
-                try
-                {
-                    if (DriverTools.UnforceVBoxDriver(windowsDevice))
-                    {
-                        reboot = true;
-                    }
-                }
-#pragma warning disable CA1031 // Do not catch general exception types
-                catch
-#pragma warning restore CA1031 // Do not catch general exception types
-                {
-                    driverError = true;
-                }
-            }
-        }
-        if (driverError)
-        {
-            console.ReportError("Not all drivers could be restored.");
-        }
-        if (reboot)
-        {
-            console.ReportRebootRequired();
-        }
-        return ExitCode.Success;
+        return UnbindBusIdAsync(busId, console, cancellationToken);
     }
 
     Task<ExitCode> ICommandHandlers.Unbind(Guid guid, IConsole console, CancellationToken cancellationToken)
@@ -327,7 +291,8 @@ sealed partial class CommandHandlers : ICommandHandlers
             console.ReportError($"There is no device with guid '{guid:D}'.");
             return Task.FromResult(ExitCode.Failure);
         }
-        return Task.FromResult(Unbind([device], console));
+
+        return UnbindGuidAsync(guid, console, cancellationToken);
     }
 
     Task<ExitCode> ICommandHandlers.Unbind(VidPid vidPid, IConsole console, CancellationToken cancellationToken)
@@ -337,53 +302,59 @@ sealed partial class CommandHandlers : ICommandHandlers
             return Task.FromResult(ExitCode.Failure);
         }
 
-        return Task.FromResult(Unbind(GetDevicesByHardwareId(vidPid, false, console), console));
+        return UnbindMultipleAsync(GetDevicesByHardwareId(vidPid, false, console), console, cancellationToken);
     }
 
-    Task<ExitCode> ICommandHandlers.UnbindAll(IConsole console, CancellationToken cancellationToken)
+    static async Task<ExitCode> UnbindMultipleAsync(List<Device> devices, IConsole console, CancellationToken cancellationToken)
+    {
+        if (devices.Count == 0)
+        {
+            return ExitCode.Failure;
+        }
+
+        var overallExit = ExitCode.Success;
+        foreach (var device in devices)
+        {
+            if (device.PersistedGuid is null)
+            {
+                continue;
+            }
+            var result = await UnbindGuidAsync(device.PersistedGuid.Value, console, cancellationToken);
+            if (result != ExitCode.Success)
+            {
+                overallExit = result;
+            }
+        }
+        return overallExit;
+    }
+
+    async Task<ExitCode> ICommandHandlers.UnbindAll(IConsole console, CancellationToken cancellationToken)
     {
         if (!CheckInstalled(console))
         {
-            return Task.FromResult(ExitCode.Failure);
+            return ExitCode.Failure;
         }
 
-        // UnbindAll() is even more special. It will also delete corrupt registry entries and
-        // also removes stub drivers for devices that are neither shared nor connected.
-        // Therefore, UnbindAll() cannot use the generic Unbind() helper.
+        ExitCode exitCode;
+        bool rebootRequired;
 
-        if (!CheckWriteAccess(console))
+        if (UsbipdRegistry.Instance.HasWriteAccess)
         {
-            return Task.FromResult(ExitCode.AccessDenied);
+            var messages = new List<BindPipeMessage>();
+            exitCode = BindService.UnbindAll(out rebootRequired, messages);
+            messages.Relay(console);
         }
-        UsbipdRegistry.Instance.StopSharingAllDevices();
-        var reboot = false;
-        var driverError = false;
-        foreach (var device in WindowsDevice.GetAll(DriverDetails.Instance.ClassGuid, false)
-            .Where(d => d.HasVBoxDriver && !d.IsStub))
+        else
         {
-            try
-            {
-                if (DriverTools.UnforceVBoxDriver(device))
-                {
-                    reboot = true;
-                }
-            }
-#pragma warning disable CA1031 // Do not catch general exception types
-            catch
-#pragma warning restore CA1031 // Do not catch general exception types
-            {
-                driverError = true;
-            }
+            (exitCode, rebootRequired) = await BindPipeClient.UnbindAllAsync(console, cancellationToken);
         }
-        if (driverError)
-        {
-            console.ReportError("Not all drivers could be restored.");
-        }
-        if (reboot)
+
+        if (exitCode == ExitCode.Success && rebootRequired)
         {
             console.ReportRebootRequired();
         }
-        return Task.FromResult(ExitCode.Success);
+
+        return exitCode;
     }
 
     async Task<ExitCode> ICommandHandlers.AttachWsl(BusId busId, bool autoAttach, bool unplugged, string? distribution, IPAddress? hostAddress,
@@ -408,7 +379,7 @@ sealed partial class CommandHandlers : ICommandHandlers
         {
             if (!device.PersistedGuid.HasValue && !Policy.IsAutoBindAllowed(device))
             {
-                console.ReportError($"Device is not shared; run 'usbipd bind --busid {busId}' as administrator first.");
+                console.ReportError($"Device is not shared; run 'usbipd bind --busid {busId}' first.");
                 return ExitCode.Failure;
             }
             // We allow auto-attach on devices that are already attached.

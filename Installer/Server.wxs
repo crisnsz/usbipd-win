@@ -7,6 +7,7 @@ SPDX-License-Identifier: GPL-3.0-only
 <Wix
     xmlns="http://wixtoolset.org/schemas/v4/wxs"
     xmlns:fw="http://wixtoolset.org/schemas/v4/wxs/firewall"
+    xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util"
     >
     <Fragment>
         <DirectoryRef Id="APPLICATIONFOLDER" FileSource="$(var.PublishDir)">
@@ -78,6 +79,17 @@ SPDX-License-Identifier: GPL-3.0-only
                         ForceCreateOnInstall="yes"
                     />
                 </RegistryKey>
+                <!--
+                Members of this group may run 'usbipd bind' and 'usbipd unbind' without administrator privileges.
+                The group is created empty; administrators must add users to it after installation.
+                -->
+                <util:Group
+                    Id="UsbipdUsers"
+                    Name="usbipd-users"
+                    Comment="Members can share and unshare USB devices using usbipd without administrator privileges."
+                    RemoveOnUninstall="no"
+                    UpdateIfExists="yes"
+                />
                 <Environment
                     Id="PATH"
                     Name="PATH"

@@ -1,0 +1,168 @@
+# SPDX-FileCopyrightText: 2026 crisnsz
+#
+# SPDX-License-Identifier: GPL-3.0-only
+
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+*'
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      x64-sha256: ${{ steps.hash.outputs.x64 }}
+      arm64-sha256: ${{ steps.hash.outputs.arm64 }}
+
+    env:
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+      DOTNET_CLI_WORKLOAD_UPDATE_NOTIFY_DISABLE: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Extract Version
+        id: version
+        run: |
+          $tag = "${{ github.ref }}" -replace 'refs/tags/v', ''
+          Write-Output "version=$tag" >> $env:GITHUB_OUTPUT
+          Write-Host "Version: $tag"
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          cache: true
+          cache-dependency-path: |
+            global.json
+            '**/packages.lock.json'
+
+      - name: Install dependencies
+        run: |
+          dotnet restore
+          dotnet restore Installer
+
+      - name: Build
+        run: |
+          dotnet build --configuration Release --no-restore --property:Platform=x64
+          dotnet build --configuration Release --no-restore --property:Platform=ARM64 Usbipd
+
+      - name: Test
+        run: |
+          dotnet test --configuration Release --no-build --property:Platform=x64 `
+            --report-spekt-junit `
+            --coverage --coverage-output-format cobertura --coverage-output coverage.cobertura.xml
+
+      - name: Build x64 Installer
+        run: |
+          dotnet publish --configuration Release --no-build --runtime win-x64 --property:PublishProfile=x64 Usbipd
+          dotnet publish --configuration Release --no-build Usbipd.PowerShell
+          dotnet build --configuration Release --no-restore --property:Platform=x64 Installer
+
+      - name: Build ARM64 Installer
+        run: |
+          dotnet publish --configuration Release --no-build --runtime win-arm64 --property:PublishProfile=arm64 Usbipd
+          dotnet build --configuration Release --no-restore --property:Platform=ARM64 Installer
+
+      - name: Calculate Checksums
+        id: hash
+        shell: pwsh
+        run: |
+          $x64File = Get-ChildItem "Installer/bin/x64/release/*.msi" | Select-Object -First 1
+          $arm64File = Get-ChildItem "Installer/bin/ARM64/release/*.msi" | Select-Object -First 1
+
+          $x64Hash = (Get-FileHash -Path $x64File.FullName -Algorithm SHA256).Hash
+          $arm64Hash = (Get-FileHash -Path $arm64File.FullName -Algorithm SHA256).Hash
+
+          Write-Output "x64=$x64Hash" >> $env:GITHUB_OUTPUT
+          Write-Output "arm64=$arm64Hash" >> $env:GITHUB_OUTPUT
+
+          Write-Host "x64 SHA256: $x64Hash"
+          Write-Host "ARM64 SHA256: $arm64Hash"
+
+      - name: Upload Artifacts
+        id: upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: msi-installers
+          path: 'Installer/bin/*/release/*.msi'
+          retention-days: 30
+
+      - name: Build Attestation
+        uses: actions/attest@v4
+        with:
+          subject-name: msi-installers.zip
+          subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v7
+        with:
+          name: msi-installers
+          path: artifacts
+
+      - name: Create Release Notes
+        id: notes
+        run: |
+          VERSION="${{ needs.build.outputs.version }}"
+
+          NOTES=$(cat <<EOF
+          ## Release v${VERSION}
+
+          ### Files
+          - usbipd-win_${VERSION}_x64.msi
+          - usbipd-win_${VERSION}_arm64.msi
+
+          ### Checksums (SHA256)
+          \`\`\`
+          x64:
+          ${{ needs.build.outputs.x64-sha256 }}
+
+          arm64:
+          ${{ needs.build.outputs.arm64-sha256 }}
+          \`\`\`
+
+          ### Installation
+          \`\`\`powershell
+          winget install crisnsz.usbipd-win
+          \`\`\`
+
+          For more information, see the [documentation](https://github.com/crisnsz/usbipd-win/wiki).
+          EOF
+          )
+
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: usbipd-win v${{ needs.build.outputs.version }}
+          body: ${{ steps.notes.outputs.notes }}
+          artifacts: artifacts/*.msi
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-rc') }}
+          token: ${{ secrets.GITHUB_TOKEN }}
