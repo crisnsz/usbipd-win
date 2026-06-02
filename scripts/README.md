@@ -2,37 +2,36 @@
 
 Utility scripts for building, releasing, and packaging usbipd-win.
 
+## ⚠️ Note: These Scripts Are Legacy
+
+**The recommended way to release is via GitHub Actions using git tags.** See [docs/RELEASE.md](../docs/RELEASE.md) for automated CI/CD process.
+
+These scripts are primarily for **local development and testing**. The GitHub Actions workflows handle production releases automatically.
+
+---
+
 ## Scripts
 
 ### Release-Usbipd.ps1
 
-Located in the project root. Build and release management script.
+Located in the project root. Local build and release preparation script.
 
-**Usage:**
+**Usage (Local Development Only):**
 ```powershell
-# Build everything and prepare release folder
+# Build everything and prepare release folder locally
 .\Release-Usbipd.ps1
-
-# Build and create GitHub release (draft)
-.\Release-Usbipd.ps1 -CreateRelease
-
-# Skip build step (use existing artifacts)
-.\Release-Usbipd.ps1 -SkipBuild
 
 # Skip tests
 .\Release-Usbipd.ps1 -SkipTests
 
 # Override detected version
-.\Release-Usbipd.ps1 -Version "4.1.0"
+.\Release-Usbipd.ps1 -Version "5.4.0"
 ```
 
 **Output:**
 - `./release/` folder with MSI files and checksums
-- (Optional) GitHub draft release with uploads
 
-**Requirements:**
-- .NET SDK 10.0.300+
-- GitHub CLI (for -CreateRelease flag)
+**Note**: This does NOT upload to GitHub. For actual releases, use git tags instead.
 
 ---
 
@@ -40,63 +39,80 @@ Located in the project root. Build and release management script.
 
 Generate Windows Package Manager (winget) manifest files for a release.
 
-**Usage:**
+**Usage (Manual Only - Usually Automatic):**
 ```powershell
 .\scripts\Create-WingetManifest.ps1 `
-    -Version "4.1.0" `
-    -GitHubReleaseUrl "https://github.com/crisnsz/usbipd-win/releases/download/v4.1.0"
+    -Version "5.4.0" `
+    -GitHubReleaseUrl "https://github.com/crisnsz/usbipd-win/releases/download/v5.4.0"
 
 # Specify output directory
 .\scripts\Create-WingetManifest.ps1 `
-    -Version "4.1.0" `
-    -GitHubReleaseUrl "https://github.com/crisnsz/usbipd-win/releases/download/v4.1.0" `
+    -Version "5.4.0" `
+    -GitHubReleaseUrl "https://github.com/crisnsz/usbipd-win/releases/download/v5.4.0" `
     -OutputPath ".\winget-manifests"
 ```
 
 **Output:**
 ```
 crisnsz.usbipd-win/
-  4.1.0/
+  5.4.0/
     crisnsz.usbipd-win.yaml
     crisnsz.usbipd-win.installer.yaml
     crisnsz.usbipd-win.locale.en-US.yaml
 ```
 
 **Parameters:**
-- `Version` (required): Semantic version number (e.g., `4.1.0`)
-- `GitHubReleaseUrl` (required): URL to GitHub release assets (e.g., `https://github.com/crisnsz/usbipd-win/releases/download/v4.1.0`)
+- `Version` (required): Semantic version number (e.g., `5.4.0`)
+- `GitHubReleaseUrl` (required): URL to GitHub release assets
 - `OutputPath` (optional): Directory for output manifests. Defaults to current directory.
 
 **Requirements:**
 - PowerShell 7.0+
 - Internet connection (downloads MSI files to calculate checksums)
 
-**Next Steps:**
-1. Submit manifests to [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs)
-2. Create pull request with the manifest folder
+**Note**: This is automatically done by the `winget.yml` GitHub Action workflow.
 
 ---
 
-## Complete Release Workflow
+## Recommended Release Workflow (Automated via GitHub)
 
-1. **Prepare release locally:**
-   ```powershell
-   .\Release-Usbipd.ps1
+1. **Merge PR to master** (GitHub compiles and tests automatically)
+
+2. **Create git tag** and push:
+   ```bash
+   git tag -a v5.4.0 -m "Release version 5.4.0"
+   git push origin v5.4.0
    ```
 
-2. **Create GitHub release:**
-   ```powershell
-   .\Release-Usbipd.ps1 -CreateRelease
-   ```
+3. **GitHub Actions handles everything automatically:**
+   - Compiles code
+   - Tests build
+   - Creates MSI installers
+   - Creates GitHub Release
+   - Sends to winget package manager
 
-3. **Publish release on GitHub** (edit and confirm in web UI)
+See [docs/RELEASE.md](../docs/RELEASE.md) for complete documentation.
 
-4. **Automatic winget update:**
-   - GitHub Actions workflow `winget.yml` automatically submits to winget
+---
 
-5. **(Optional) Manual winget manifest:**
-   ```powershell
-   .\scripts\Create-WingetManifest.ps1 -Version "4.1.0" -GitHubReleaseUrl "https://github.com/crisnsz/usbipd-win/releases/download/v4.1.0"
-   ```
+## When to Use These Scripts
 
-See [docs/RELEASE.md](../docs/RELEASE.md) for detailed documentation.
+| Scenario | Tool |
+|----------|------|
+| Local testing before PR | `Release-Usbipd.ps1` |
+| Manual winget manifest | `Create-WingetManifest.ps1` |
+| Production release | `git tag v5.4.0` → GitHub Actions |
+| CI/CD build | GitHub Actions (automatic) |
+
+---
+
+## Legacy Information
+
+These scripts were created to support **local development workflows**. However, the GitHub Actions workflows (`release.yml` and `winget.yml`) are now the recommended way to create and publish releases.
+
+Benefits of GitHub Actions automation:
+- ✅ No manual script execution needed
+- ✅ Consistent builds on GitHub runners
+- ✅ Automatic winget integration
+- ✅ Better audit trail and history
+- ✅ Faster release process
