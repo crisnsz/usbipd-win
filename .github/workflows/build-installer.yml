@@ -83,7 +83,7 @@ jobs:
         uses: actions/attest@v4
         with:
           subject-name: artifacts.zip
-          subject-digest: sha256:${{ steps.upload.outputs.artifact-digest }}
+          subject-digest: ${{ steps.upload.outputs.artifact-digest }}
 
       # TODO: configure CODECOV_TOKEN secret to enable coverage reporting
       # - name: Upload test results to Codecov

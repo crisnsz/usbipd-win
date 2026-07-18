@@ -44,6 +44,11 @@ jobs:
             echo "Auto-detected version: $VERSION"
           fi
 
+          if [ -z "$VERSION" ]; then
+            echo "ERROR: Could not determine version" >&2
+            exit 1
+          fi
+
           TAG="v${VERSION}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "tag=$TAG" >> $GITHUB_OUTPUT
