@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   REUSE:
-    uses: dorssel/workflows/.github/workflows/REUSE.yml@main
+    uses: crisnsz/workflows/.github/workflows/REUSE.yml@main
 
   MegaLinterNET:
-    uses: dorssel/workflows/.github/workflows/mega-linter-dotnet.yml@main
+    uses: crisnsz/workflows/.github/workflows/mega-linter-dotnet.yml@main
