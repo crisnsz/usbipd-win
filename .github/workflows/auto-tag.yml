@@ -10,7 +10,7 @@ name: Auto Tag
 on:
   push:
     branches: [master]
-  workflow_dispatch:
+  workflow_dispatch: # checkov:skip=CKV_GHA_7:version input is intentional for manual release tagging
     inputs:
       version:
         description: 'Version to tag (e.g. 5.4.0). Leave empty to auto-detect.'

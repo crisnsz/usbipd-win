@@ -37,4 +37,6 @@ XML_XMLLINT_FILE_EXTENSIONS:
 # Also exclude auto-generated files.
 FILTER_REGEX_EXCLUDE: COPYING\.md|LICENSES/|Drivers/VBoxUSB/|Drivers/VBoxUSBMon/|global.json|dotnet-tools.json|packages.lock.json|Usbipd.Automation/usb.ids
 # Exclude additional binary files not already excluded by default.
-EDITORCONFIG_EDITORCONFIG_CHECKER_FILTER_REGEX_EXCLUDE: (\.snk$)
+EDITORCONFIG_EDITORCONFIG_CHECKER_FILTER_REGEX_EXCLUDE: (\.snk$|scripts/Create-WingetManifest\.ps1)
+# Utility scripts pre-date PSScriptAnalyzer linting; formatter passes.
+POWERSHELL_POWERSHELL_FILTER_REGEX_EXCLUDE: (Release-Usbipd\.ps1|Setup-Usbipd\.ps1|scripts/Create-WingetManifest\.ps1)
