@@ -20,6 +20,7 @@ DISABLE_LINTERS:
   - CSHARP_CSHARPIER # Not compatible with .NET 8 (yet)
   - CSHARP_ROSLYNATOR # Not compatible with .NET 8 (yet)
   - REPOSITORY_TRIVY # Unstable, leading to a lot of build failures
+  - ACTION_ZIZMOR # Requires PAT with cross-repo access; GITHUB_TOKEN scope is insufficient
 SHOW_ELAPSED_TIME: true
 FILEIO_REPORTER: false
 # DISABLE_ERRORS: true # Uncomment if you want MegaLinter to detect errors but not block CI to pass
