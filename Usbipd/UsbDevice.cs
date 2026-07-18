@@ -1,4 +1,8 @@
-﻿using System.Net;
+﻿// SPDX-FileCopyrightText: 2026 crisnsz
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+using System.Net;
 using Usbipd.Automation;
 using Windows.Win32;
 

@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 crisnsz -->
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+
 # usbipd-win Scripts
 
 Utility scripts for building, releasing, and packaging usbipd-win.

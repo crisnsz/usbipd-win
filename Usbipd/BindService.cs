@@ -1,4 +1,8 @@
-﻿namespace Usbipd;
+﻿// SPDX-FileCopyrightText: 2026 crisnsz
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+namespace Usbipd;
 
 static class BindService
 {
