@@ -50,18 +50,18 @@ jobs:
           fi
 
           TAG="v${VERSION}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Check Tag Exists
         id: check
         run: |
           TAG="${{ steps.version.outputs.tag }}"
           if git tag --list | grep -q "^${TAG}$"; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "Tag $TAG already exists, skipping."
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> "$GITHUB_OUTPUT"
             echo "Tag $TAG does not exist, will create."
           fi
 
