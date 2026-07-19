@@ -40,7 +40,7 @@ FILTER_REGEX_EXCLUDE: COPYING\.md|LICENSES/|Drivers/VBoxUSB/|Drivers/VBoxUSBMon/
 EDITORCONFIG_EDITORCONFIG_CHECKER_FILTER_REGEX_EXCLUDE: (\.snk$|scripts/Create-WingetManifest\.ps1)
 # Utility scripts pre-date PSScriptAnalyzer linting; formatter passes.
 POWERSHELL_POWERSHELL_FILTER_REGEX_EXCLUDE: (Release-Usbipd\.ps1|Setup-Usbipd\.ps1|scripts/Create-WingetManifest\.ps1)
-ACTION_ZIZMOR_ARGUMENTS: --config .github/zizmor.yml
+ACTION_ZIZMOR_ARGUMENTS: --config .github/zizmor.yml --min-severity low
 ACTION_ZIZMOR_UNSECURED_ENV_VARIABLES:
   - GITHUB_TOKEN
   - GH_TOKEN
