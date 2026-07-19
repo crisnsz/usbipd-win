@@ -12,10 +12,11 @@ on:
   schedule:
     - cron: '3 16 * * *'
 
-permissions: read-all
+permissions: {}
 
 jobs:
   check:
+    name: Check (drivers)
     runs-on: ubuntu-latest
 
     permissions:
@@ -23,7 +24,9 @@ jobs:
       pull-requests: write
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
 
       - name: Get current version of drivers
         run: |
@@ -89,7 +92,7 @@ jobs:
 
       - name: Create Pull Request
         if: ${{ steps.check-update.outputs.has-update == 'true' }}
-        uses: peter-evans/create-pull-request@v8
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           commit-message: 'Bump drivers from ${{ env.CURRENT }} to ${{ env.LATEST }}'
           title: 'Bump drivers from ${{ env.CURRENT }} to ${{ env.LATEST }}'
@@ -97,3 +100,4 @@ jobs:
           body: |
             This is an automated pull request, updating the VirtualBox drivers after a detected change.
             Please review manually before merging.
+          sign-commits: true
