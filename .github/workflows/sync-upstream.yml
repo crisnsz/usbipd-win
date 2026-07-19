@@ -60,6 +60,7 @@ jobs:
           # Always keep fork's .github/ — removes upstream additions and restores ours.
           git rm -r --cached .github/ 2>/dev/null || true
           git checkout HEAD -- .github/
+          git clean -fd .github/   # remove upstream-added files not in fork HEAD
           git add .github/
 
           # Collect any remaining conflicts outside .github/
