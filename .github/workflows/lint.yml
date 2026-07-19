@@ -13,10 +13,11 @@ on:
   pull_request:
     branches: [master]
 
+permissions:
+  contents: read
+
 jobs:
   REUSE:
-    permissions:
-      contents: read
     uses: crisnsz/workflows/.github/workflows/REUSE.yml@main
 
   MegaLinterNET:
