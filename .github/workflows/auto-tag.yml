@@ -10,7 +10,7 @@ name: Auto Tag
 on:
   push:
     branches: [master]
-  workflow_dispatch:
+  workflow_dispatch: # checkov:skip=CKV_GHA_7:version input is intentional for manual release tagging
     inputs:
       version:
         description: 'Version to tag (e.g. 5.4.0). Leave empty to auto-detect.'
@@ -26,16 +26,18 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: false
 
       - name: Determine Version
         id: version
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
         run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            VERSION="${{ inputs.version }}"
+          if [ -n "$VERSION_INPUT" ]; then
+            VERSION="$VERSION_INPUT"
             echo "Using manual version: $VERSION"
           else
             # Instalar GitVersion CLI
@@ -44,33 +46,40 @@ jobs:
             echo "Auto-detected version: $VERSION"
           fi
 
+          if [ -z "$VERSION" ]; then
+            echo "ERROR: Could not determine version" >&2
+            exit 1
+          fi
+
           TAG="v${VERSION}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Check Tag Exists
         id: check
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          TAG="${{ steps.version.outputs.tag }}"
           if git tag --list | grep -q "^${TAG}$"; then
-            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "exists=true" >> "$GITHUB_OUTPUT"
             echo "Tag $TAG already exists, skipping."
           else
-            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "exists=false" >> "$GITHUB_OUTPUT"
             echo "Tag $TAG does not exist, will create."
           fi
 
       - name: Create and Push Tag
         if: steps.check.outputs.exists == 'false'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          TAG="${{ steps.version.outputs.tag }}"
-          VERSION="${{ steps.version.outputs.version }}"
-
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git tag -a "$TAG" -m "Release $VERSION"
-          git push origin "$TAG"
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}" "$TAG"
 
           echo "✅ Tag $TAG created and pushed"
           echo "release.yml will now trigger automatically"

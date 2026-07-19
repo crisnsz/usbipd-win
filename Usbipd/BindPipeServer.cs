@@ -1,4 +1,8 @@
-﻿using System.IO.Pipes;
+﻿// SPDX-FileCopyrightText: 2026 crisnsz
+//
+// SPDX-License-Identifier: GPL-3.0-only
+
+using System.IO.Pipes;
 using System.Security.AccessControl;
 using System.Security.Principal;
 using System.Text;

@@ -34,6 +34,13 @@ XML_XMLLINT_FILE_EXTENSIONS:
   - .wxs
 # Exclude verbatim copies of external sources that are not under our control.
 # Also exclude auto-generated files.
-FILTER_REGEX_EXCLUDE: COPYING\.md|LICENSES/|Drivers/VBoxUSB/|Drivers/VBoxUSBMon/|global.json|dotnet-tools.json|packages.lock.json|Usbipd.Automation/usb.ids
+# yamllint disable-line rule:line-length
+FILTER_REGEX_EXCLUDE: COPYING\.md|LICENSES/|Drivers/VBoxUSB/|Drivers/VBoxUSBMon/|global.json|dotnet-tools.json|packages.lock.json|Usbipd.Automation/usb.ids|\.github/zizmor\.yml
 # Exclude additional binary files not already excluded by default.
-EDITORCONFIG_EDITORCONFIG_CHECKER_FILTER_REGEX_EXCLUDE: (\.snk$)
+EDITORCONFIG_EDITORCONFIG_CHECKER_FILTER_REGEX_EXCLUDE: (\.snk$|scripts/Create-WingetManifest\.ps1)
+# Utility scripts pre-date PSScriptAnalyzer linting; formatter passes.
+POWERSHELL_POWERSHELL_FILTER_REGEX_EXCLUDE: (Release-Usbipd\.ps1|Setup-Usbipd\.ps1|scripts/Create-WingetManifest\.ps1)
+ACTION_ZIZMOR_ARGUMENTS: --config .github/zizmor.yml --min-severity low
+ACTION_ZIZMOR_UNSECURED_ENV_VARIABLES:
+  - GITHUB_TOKEN
+  - GH_TOKEN

@@ -22,7 +22,7 @@ SPDX-License-Identifier: GPL-3.0-only
         Scope="perMachine"
         >
 
-        <SoftwareTag xml:lang="en-us" InstallDirectory="APPLICATIONFOLDER" Regid="github.com/dorssel" />
+        <SoftwareTag xml:lang="en-us" InstallDirectory="APPLICATIONFOLDER" Regid="github.com/crisnsz" />
 
         <?ifdef Debug ?>
         <MediaTemplate EmbedCab="yes" CompressionLevel="none" />
@@ -56,9 +56,9 @@ SPDX-License-Identifier: GPL-3.0-only
             <?error Unsupported architecture. ?>
         <?endif?>
 
-        <Property Id="ARPURLINFOABOUT" Value="https://github.com/dorssel/usbipd-win" />
-        <Property Id="ARPURLUPDATEINFO" Value="https://github.com/dorssel/usbipd-win/releases" />
-        <Property Id="ARPHELPLINK" Value="https://github.com/dorssel/usbipd-win/issues" />
+        <Property Id="ARPURLINFOABOUT" Value="https://github.com/crisnsz/usbipd-win" />
+        <Property Id="ARPURLUPDATEINFO" Value="https://github.com/crisnsz/usbipd-win/releases" />
+        <Property Id="ARPHELPLINK" Value="https://github.com/crisnsz/usbipd-win/issues" />
 
         <Property Id="MSIDEPLOYMENTCOMPLIANT" Value="1" />
 

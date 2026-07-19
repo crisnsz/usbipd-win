@@ -1,3 +1,6 @@
+<!-- SPDX-FileCopyrightText: 2026 crisnsz -->
+<!-- SPDX-License-Identifier: GPL-3.0-only -->
+
 # Release Process for usbipd-win
 
 This document describes how to create and publish releases for usbipd-win to both GitHub Releases and Windows Package Manager (winget).

@@ -397,7 +397,7 @@ static partial class Wsl
             var wslResult = await RunWslAsync((distribution, WslMountPoint), null, false, cancellationToken, "./usbip", "version");
             if (wslResult.ExitCode != 0 || wslResult.StandardOutput.Trim() != "usbip (usbip-utils 2.0)")
             {
-                console.ReportError($"Unable to run 'usbip' client tool. Please report this at https://github.com/dorssel/usbipd-win/issues.");
+                console.ReportError($"Unable to run 'usbip' client tool. Please report this at https://github.com/crisnsz/usbipd-win/issues.");
                 return ExitCode.Failure;
             }
         }

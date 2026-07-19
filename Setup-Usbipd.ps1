@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 crisnsz
+#
+# SPDX-License-Identifier: GPL-3.0-only
+
 param(
     [switch]$Build
 )
