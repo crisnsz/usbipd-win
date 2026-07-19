@@ -12,14 +12,13 @@ on:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+*'
 
-permissions:
-  contents: write
-  id-token: write
-  attestations: write
-
 jobs:
   build:
     runs-on: windows-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     outputs:
       version: ${{ steps.version.outputs.version }}
       x64-sha256: ${{ steps.hash.outputs.x64 }}
@@ -37,8 +36,10 @@ jobs:
 
       - name: Extract Version
         id: version
+        env:
+          GIT_REF: ${{ github.ref }}
         run: |
-          $tag = "${{ github.ref }}" -replace 'refs/tags/v', ''
+          $tag = "$env:GIT_REF" -replace 'refs/tags/v', ''
           Write-Output "version=$tag" >> $env:GITHUB_OUTPUT
           Write-Host "Version: $tag"
 
@@ -110,6 +111,8 @@ jobs:
   release:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
@@ -129,8 +132,12 @@ jobs:
 
       - name: Create Release Notes
         id: notes
+        env:
+          BUILD_VERSION: ${{ needs.build.outputs.version }}
+          X64_SHA256: ${{ needs.build.outputs.x64-sha256 }}
+          ARM64_SHA256: ${{ needs.build.outputs.arm64-sha256 }}
         run: |
-          VERSION="${{ needs.build.outputs.version }}"
+          VERSION="$BUILD_VERSION"
 
           NOTES=$(cat <<EOF
           ## Release v${VERSION}
@@ -142,10 +149,10 @@ jobs:
           ### Checksums (SHA256)
           \`\`\`
           x64:
-          ${{ needs.build.outputs.x64-sha256 }}
+          ${X64_SHA256}
 
           arm64:
-          ${{ needs.build.outputs.arm64-sha256 }}
+          ${ARM64_SHA256}
           \`\`\`
 
           ### Installation

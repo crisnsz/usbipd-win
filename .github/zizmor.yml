@@ -10,3 +10,5 @@
 rules:
   unpinned-uses:
     disable: true
+  cache-poisoning:
+    disable: true

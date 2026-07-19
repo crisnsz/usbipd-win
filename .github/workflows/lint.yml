@@ -13,13 +13,14 @@ on:
   pull_request:
     branches: [master]
 
-permissions:
-  contents: read
-  pull-requests: write
-
 jobs:
   REUSE:
+    permissions:
+      contents: read
     uses: crisnsz/workflows/.github/workflows/REUSE.yml@main
 
   MegaLinterNET:
+    permissions:
+      contents: read
+      pull-requests: write
     uses: crisnsz/workflows/.github/workflows/mega-linter-dotnet.yml@main
