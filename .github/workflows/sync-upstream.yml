@@ -53,16 +53,31 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
-          git merge upstream/master --no-edit \
-            -m "chore: sync ${BEHIND} commit(s) from dorssel/usbipd-win"
+
+          CONFLICTS=""
+          if ! git merge upstream/master --no-edit \
+            -m "chore: sync ${BEHIND} commit(s) from dorssel/usbipd-win"; then
+            CONFLICTS=$(git diff --name-only --diff-filter=U | tr '\n' ' ')
+            git add -A
+            git commit -m "chore: sync ${BEHIND} commit(s) from dorssel/usbipd-win [conflicts: ${CONFLICTS}]"
+          fi
 
           git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}" "$BRANCH"
 
+          if [ -n "$CONFLICTS" ]; then
+            BODY="Automated sync of **${BEHIND}** new commit(s) from [dorssel/usbipd-win](https://github.com/dorssel/usbipd-win/commits/master).
+
+          ⚠️ **Merge conflicts detected** in: \`${CONFLICTS}\`
+          Resolve the conflicts manually before merging this PR."
+          else
+            BODY="Automated sync of **${BEHIND}** new commit(s) from [dorssel/usbipd-win](https://github.com/dorssel/usbipd-win/commits/master).
+
+          Review the changes before merging to ensure no conflicts with fork-specific customizations."
+          fi
+
           gh pr create \
             --title "chore: sync upstream dorssel/usbipd-win (${BEHIND} commits)" \
-            --body "Automated sync of **${BEHIND}** new commit(s) from [dorssel/usbipd-win](https://github.com/dorssel/usbipd-win/commits/master).
-
-          Review the changes before merging to ensure no conflicts with fork-specific customizations." \
+            --body "$BODY" \
             --base master \
             --head "$BRANCH" \
             --label "upstream-sync" 2>/dev/null || true
