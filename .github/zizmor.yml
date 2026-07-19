@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 crisnsz
+#
+# SPDX-License-Identifier: GPL-3.0-only
+
+# zizmor security audit configuration
+# https://docs.zizmor.sh/configuration/
+
+# cache-poisoning: the NuGet/dotnet cache in build workflows is a known and accepted risk.
+# Removing it would significantly impact CI performance.
+rules:
+  cache-poisoning:
+    disable: true
