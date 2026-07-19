@@ -1,0 +1,72 @@
+# SPDX-FileCopyrightText: 2026 crisnsz
+#
+# SPDX-License-Identifier: GPL-3.0-only
+
+---
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Sync upstream
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  sync:
+    name: Sync (upstream)
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Fetch upstream
+        run: |
+          git remote add upstream https://github.com/dorssel/usbipd-win.git
+          git fetch upstream master
+
+      - name: Check for new upstream commits
+        id: check
+        run: |
+          BEHIND=$(git rev-list HEAD..upstream/master --count)
+          echo "behind=$BEHIND" >> "$GITHUB_OUTPUT"
+          echo "Upstream is $BEHIND commit(s) ahead"
+
+      - name: Create sync branch and PR
+        if: steps.check.outputs.behind != '0'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BEHIND: ${{ steps.check.outputs.behind }}
+        run: |
+          BRANCH="sync/upstream-$(date +%Y%m%d)"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git merge upstream/master --no-edit \
+            -m "chore: sync ${BEHIND} commit(s) from dorssel/usbipd-win"
+
+          git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}" "$BRANCH"
+
+          gh pr create \
+            --title "chore: sync upstream dorssel/usbipd-win (${BEHIND} commits)" \
+            --body "Automated sync of **${BEHIND}** new commit(s) from [dorssel/usbipd-win](https://github.com/dorssel/usbipd-win/commits/master).
+
+          Review the changes before merging to ensure no conflicts with fork-specific customizations." \
+            --base master \
+            --head "$BRANCH" \
+            --label "upstream-sync" 2>/dev/null || true
+
+      - name: Already up to date
+        if: steps.check.outputs.behind == '0'
+        run: echo "Fork is already up to date with upstream."
