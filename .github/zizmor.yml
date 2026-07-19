@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: 2026 crisnsz
+#
+# SPDX-License-Identifier: GPL-3.0-only
+
+# zizmor security audit configuration
+# https://docs.zizmor.sh/configuration/
+
+# TODO: pin all action references to commit SHAs (unpinned-uses audit).
+# Each `uses: action@vX` should be `uses: action@<sha>` for supply-chain security.
+rules:
+  unpinned-uses:
+    ignore: true

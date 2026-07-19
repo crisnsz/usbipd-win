@@ -33,9 +33,11 @@ jobs:
 
       - name: Determine Version
         id: version
+        env:
+          VERSION_INPUT: ${{ inputs.version }}
         run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            VERSION="${{ inputs.version }}"
+          if [ -n "$VERSION_INPUT" ]; then
+            VERSION="$VERSION_INPUT"
             echo "Using manual version: $VERSION"
           else
             # Instalar GitVersion CLI
