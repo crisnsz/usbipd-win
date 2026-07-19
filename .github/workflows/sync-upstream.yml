@@ -54,25 +54,22 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git checkout -b "$BRANCH"
 
-          # Merge upstream; keep fork's .github/ to avoid workflow permission issues
-          # and preserve fork-specific customizations.
-          CONFLICTS=""
-          if ! git merge upstream/master --no-edit \
-            -m "chore: sync ${BEHIND} commit(s) from dorssel/usbipd-win"; then
-            CONFLICTS=$(git diff --name-only --diff-filter=U | grep -v '^\.github/' | tr '\n' ' ')
-          fi
+          # Merge upstream without committing so we can fix .github/ first.
+          git merge upstream/master --no-commit --no-ff || true
 
-          # Always restore fork's .github/ after merge (our customizations take precedence).
-          git checkout HEAD -- .github/ 2>/dev/null || true
+          # Always keep fork's .github/ — removes upstream additions and restores ours.
+          git rm -r --cached .github/ 2>/dev/null || true
+          git checkout HEAD -- .github/
+          git add .github/
 
+          # Collect any remaining conflicts outside .github/
+          CONFLICTS=$(git diff --name-only --diff-filter=U | tr '\n' ' ')
           if [ -n "$CONFLICTS" ]; then
             git add -A
             git commit -m "chore: sync ${BEHIND} commit(s) from dorssel/usbipd-win [conflicts: ${CONFLICTS}]"
-          elif git diff --cached --quiet && git diff --quiet; then
-            : # nothing left to commit
           else
-            git add -A
-            git commit -m "chore: restore fork .github/ after upstream merge"
+            git commit -m "chore: sync ${BEHIND} commit(s) from dorssel/usbipd-win" \
+              || echo "Nothing new to commit after restoring .github/"
           fi
 
           git push "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}" "$BRANCH"
