@@ -9,4 +9,4 @@
 # Each `uses: action@vX` should be `uses: action@<sha>` for supply-chain security.
 rules:
   unpinned-uses:
-    ignore: true
+    disable: true
