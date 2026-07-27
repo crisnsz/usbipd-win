@@ -10,7 +10,7 @@ SPDX-License-Identifier: GPL-3.0-only
     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util"
     >
     <Fragment>
-        <DirectoryRef Id="APPLICATIONFOLDER" FileSource="$(var.PublishDir)">
+        <DirectoryRef Id="APPLICATIONFOLDER">
             <!--
             The product name is 'usbipd-win', but our users are well aware they are
             running a Windows operating system. Hence, the executable, service name,
