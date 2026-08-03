@@ -1,6 +1,10 @@
 # Declaration of License Compliance
 
+<<<<<<< HEAD
 These drivers are from a binary distribution of VirtualBox, version 7.2.12, provided
+=======
+These drivers are from a binary distribution of VirtualBox, version 7.2.14, provided
+>>>>>>> upstream/master
 by Oracle Corporation, subject to the terms and conditions of the
 [GNU General Public License, version 3](https://www.gnu.org/licenses/gpl-3.0.html).
 
