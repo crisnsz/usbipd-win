@@ -27,7 +27,7 @@ SPDX-License-Identifier: GPL-3.0-only
     <NuGetAuditLevel>low</NuGetAuditLevel>
     <NuGetAuditMode>all</NuGetAuditMode>
 
-    <!-- This allows building on Linux (required for Dependabot); however, building the installer requires Windows -->
+    <!-- This allows NuGet restore on Linux (required for Dependabot); however, building requires Windows -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
 
     <!-- Common defaults -->
@@ -46,7 +46,11 @@ SPDX-License-Identifier: GPL-3.0-only
     <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 
     <!-- Bump MSTest.Sdk "transitive" dependencies (they are actually direct dependencies) -->
+<<<<<<< HEAD
     <!-- none at this time -->
+=======
+    <MicrosoftTestingExtensionsCodeCoverageVersion>18.10.0</MicrosoftTestingExtensionsCodeCoverageVersion>
+>>>>>>> upstream/master
 
     <!-- Deterministic builds -->
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
