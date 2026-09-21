@@ -7,10 +7,16 @@ SPDX-License-Identifier: GPL-3.0-only
 
 # usbipd-win (crisnsz fork)
 
+<<<<<<< HEAD
 [![Build](https://github.com/crisnsz/usbipd-win/actions/workflows/build-installer.yml/badge.svg?branch=master)](https://github.com/crisnsz/usbipd-win/actions/workflows/build-installer.yml?query=branch%3Amaster)
 [![Release](https://github.com/crisnsz/usbipd-win/actions/workflows/release.yml/badge.svg)](https://github.com/crisnsz/usbipd-win/actions/workflows/release.yml)
 [![CodeQL](https://github.com/crisnsz/usbipd-win/actions/workflows/codeql-analysis.yml/badge.svg?branch=master)](https://github.com/crisnsz/usbipd-win/actions/workflows/codeql-analysis.yml?query=workflow%3ACodeQL+branch%3Amaster)
 [![GitHub all releases](https://img.shields.io/github/downloads/crisnsz/usbipd-win/total?logo=github)](https://github.com/crisnsz/usbipd-win/releases)
+=======
+[![REUSE status](https://api.reuse.software/badge/github.com/dorssel/usbipd-win)](https://api.reuse.software/info/github.com/dorssel/usbipd-win)
+[![Codecov](https://codecov.io/gh/dorssel/usbipd-win/branch/master/graph/badge.svg?token=L0QI0AZRJI)](https://codecov.io/gh/dorssel/usbipd-win)
+[![GitHub all releases](https://img.shields.io/github/downloads/dorssel/usbipd-win/total?logo=github)](https://github.com/dorssel/usbipd-win/releases)
+>>>>>>> upstream/master
 
 Windows software for sharing locally connected USB devices to other machines, including Hyper-V guests and WSL 2.
 
