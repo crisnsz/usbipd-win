@@ -8,9 +8,9 @@
 name: winget
 
 on:
+  # Manual only until the package is accepted in microsoft/winget-pkgs.
+  # Re-enable `release: types: [released]` after the first manual submission is merged.
   workflow_dispatch:
-  release:
-    types: [released]
 
 permissions: {}
 

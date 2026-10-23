@@ -3,7 +3,9 @@
 
 # Release Process for usbipd-win
 
-This document describes how to create and publish releases for usbipd-win to both GitHub Releases and Windows Package Manager (winget).
+This document describes how to create and publish releases for usbipd-win to GitHub Releases.
+
+> **Status:** winget publishing is **not active yet**. The tooling below is ready, but the package has not been submitted to `microsoft/winget-pkgs`, so the `winget` workflow is manual-only (`workflow_dispatch`).
 
 ## Overview
 

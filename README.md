@@ -16,13 +16,44 @@ Windows software for sharing locally connected USB devices to other machines, in
 
 ## About This Fork
 
-This is a fork of the original [dorssel/usbipd-win](https://github.com/dorssel/usbipd-win) project with enhancements:
-- **Windows Service Bridge**: Improved permission delegation via service that runs with elevated rights
-- **Group-based Access**: Users in `usbipd-users` group can execute commands without requiring admin privileges (similar to `docker-users` group)
-- **Automated CI/CD**: Release automation via GitHub Actions with automatic winget package updates
-- **v5.4.0+**: Full backward compatibility with the original project while adding new features
+This is a fork of [dorssel/usbipd-win](https://github.com/dorssel/usbipd-win) that lets non-admin users share USB devices.
 
-Install this fork: `winget install crisnsz.usbipd-win`
+### The problem
+
+In upstream, `usbipd bind` / `unbind` need an elevated terminal. On a machine where you are not a local administrator, such as a managed work laptop, every bind needs an admin prompt. Docker Desktop has the same kind of problem and solves it with a privileged service plus a `docker-users` group. VMware lets a VM take a USB device without admin rights at runtime. This fork applies the same model to usbipd.
+
+The request was discussed upstream in [dorssel/usbipd-win#1315](https://github.com/dorssel/usbipd-win/issues/1315). The maintainer added a simple group check on a separate branch, but declined a service/IPC redesign because a dedicated driver is planned. This fork implements that redesign.
+
+My use case: opening untrusted cloned repositories inside a WSL distro, instead of on the Windows host or in a VM, while still passing USB devices through.
+
+### What it changes
+
+- **Privilege separation over a named pipe:** the elevated `usbipd` service does the privileged work. The CLI sends requests to it over the `usbipd-bind` named pipe instead of needing elevation itself.
+- **Group-based authorization:** the service checks the caller's Windows token. Only members of `Administrators` or the local `usbipd-users` group are accepted; anyone else is rejected and logged.
+- **Small, fixed command set:** the pipe accepts only `Bind`, `Unbind` and `UnbindAll`. Any other command is rejected.
+- **Pipe hardening:** maximum string length (20 KiB), request read timeout (50 s) and a cap on concurrent pipe instances. These limit malformed or slow clients.
+- **Stability fix:** devices disconnected under high USB traffic. Testing versions one by one traced it to the device I/O code, which was reverted to the v5.3.0 implementation (`Usbipd/DeviceFile.cs`).
+- **CI/CD:** release automation (MSI for x64 and ARM64, checksums), SHA-pinned actions, and [zizmor](https://github.com/zizmorcore/zizmor) workflow scanning.
+
+### Setup
+
+The installer creates the `usbipd-users` group **empty**. An administrator adds users once:
+
+```powershell
+# elevated, once per user
+Add-LocalGroupMember -Group usbipd-users -Member "$env:USERDOMAIN\$env:USERNAME"
+```
+
+The user then signs out and back in, so the new group membership is part of their token. From then on, `usbipd bind` (including `--force`) and `usbipd unbind` work from a normal terminal.
+
+### Security notes
+
+This is an extra privileged endpoint on the machine, so it adds attack surface. WSL in particular is not a sandbox. For that reason I did not propose it for use at work without a deeper review. Known gaps:
+
+- `bind --force` goes through the service too, so a `usbipd-users` member can make the service force-install the bundled VirtualBox USB stub driver on a device. Upstream deliberately keeps this admin-only. The service only ever installs that one bundled driver, never an arbitrary one, but the risk should still be weighed.
+- The server's handling of busid/instance-ID input has not been reviewed adversarially, and there is no audit trail beyond the service log.
+
+Install this fork: download the `.msi` from the [latest release](https://github.com/crisnsz/usbipd-win/releases/latest).
 
 ## How to install
 
@@ -33,11 +64,10 @@ it does not depend on any other software.
 Run the installer (.msi) from the [latest release](https://github.com/crisnsz/usbipd-win/releases/latest)
 on the Windows machine where your USB device is connected.
 
-Alternatively, use the Windows Package Manager:
-
-```powershell
-winget install crisnsz.usbipd-win
-```
+> [!NOTE]
+> This fork is not published to the Windows Package Manager (winget) yet — the manifest tooling exists
+> (`scripts/Create-WingetManifest.ps1`), but the package has not been submitted to
+> [microsoft/winget-pkgs](https://github.com/microsoft/winget-pkgs). `winget install usbipd` installs the **upstream** project, not this fork.
 
 This will install:
 
@@ -61,7 +91,7 @@ for PowerShell.
 ### Share Devices
 
 By default devices are not shared with USBIP clients.
-To lookup and share devices, run the following commands with administrator privileges:
+To lookup and share devices, run the following commands with administrator privileges, or as a member of `usbipd-users` (see [Setup](#setup)):
 
 ```powershell
 usbipd --help
@@ -113,11 +143,6 @@ for a list of GUI and IDE integration tools in case you prefer that over a CLI.
 
 Uninstall via Add/Remove Programs or via Settings/Apps.
 
-Alternatively, use the Windows Package Manager:
-
-```powershell
-winget uninstall crisnsz.usbipd-win
-```
 
 ## Development & Releases
 
@@ -130,7 +155,6 @@ This project uses **fully automated CI/CD** with GitHub Actions:
 3. **GitHub Actions releases automatically:**
    - Builds MSI installers (x64 + ARM64)
    - Creates GitHub Release with checksums
-   - Triggers automatic winget package update
 
 See [docs/RELEASE.md](docs/RELEASE.md) for detailed release documentation.
 
