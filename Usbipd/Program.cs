@@ -12,16 +12,12 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
-using System.Reflection;
 using Usbipd.Automation;
 
 namespace Usbipd;
 
 static class Program
 {
-    public static readonly string Product = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyProductAttribute>()!.Product;
-    public static readonly string Copyright = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyCopyrightAttribute>()!.Copyright;
-
     static void AddParseError<T>(ArgumentResult argumentResult)
     {
         var value = argumentResult.Tokens[0].Value;
@@ -182,7 +178,7 @@ static class Program
         public override int Invoke(ParseResult parseResult)
         {
             // Always prepend the product and version.
-            parseResult.InvocationConfiguration.Output.WriteLine($"{Product} {GitVersionInformation.MajorMinorPatch}");
+            parseResult.InvocationConfiguration.Output.WriteLine($"{ThisAssembly.Product} {ThisAssembly.NuGetPackageVersion}");
             parseResult.InvocationConfiguration.Output.WriteLine();
 
             var command = parseResult.CommandResult.Command;
@@ -460,11 +456,16 @@ static class Program
         }
         {
             //
-            //  list [--usbids]
+            //  list [--usbids] [--connected]
             //
             var usbidsOption = new Option<bool>("--usbids", "-u")
             {
                 Description = "Show device description from Linux database",
+                Arity = ArgumentArity.Zero,
+            };
+            var connectedOption = new Option<bool>("--connected", "-c")
+            {
+                Description = "Only show connected devices",
                 Arity = ArgumentArity.Zero,
             };
             //
@@ -474,9 +475,10 @@ static class Program
                 "Lists currently connected USB devices as well as USB devices that are shared but are not currently connected.")
             {
                 usbidsOption,
+                connectedOption,
             };
             listCommand.SetAction(async (parseResult, cancellationToken) => (int)
-                await commandHandlers.List(parseResult.GetValue(usbidsOption), console, cancellationToken)
+                await commandHandlers.List(parseResult.GetValue(usbidsOption), parseResult.GetValue(connectedOption), console, cancellationToken)
             );
             rootCommand.Subcommands.Add(listCommand);
         }

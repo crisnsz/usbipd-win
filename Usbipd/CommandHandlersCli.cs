@@ -74,8 +74,8 @@ sealed partial class CommandHandlers : ICommandHandlers
         // 70 leads (approximately) to the GPL default.
         var width = console.IsOutputRedirected ? 70 : console.WindowWidth;
         foreach (var line in Wrap($"""
-            {Program.Product} {GitVersionInformation.MajorMinorPatch}
-            {Program.Copyright}
+            {ThisAssembly.Product} {ThisAssembly.NuGetPackageVersion}
+            {ThisAssembly.Copyright}
 
             This program is free software: you can redistribute it and/or modify \
             it under the terms of the GNU General Public License as published by \
@@ -113,7 +113,7 @@ sealed partial class CommandHandlers : ICommandHandlers
         }
     }
 
-    Task<ExitCode> ICommandHandlers.List(bool usbIds, IConsole console, CancellationToken cancellationToken)
+    Task<ExitCode> ICommandHandlers.List(bool usbIds, bool connectedOnly, IConsole console, CancellationToken cancellationToken)
     {
         if (!CheckInstalled(console))
         {
@@ -138,16 +138,19 @@ sealed partial class CommandHandlers : ICommandHandlers
         }
         console.Out.WriteLine();
 
-        console.Out.WriteLine("Persisted:");
-        console.Out.WriteLine($"{"GUID",-36}  DEVICE");
-        foreach (var device in allDevices.Where(d => !d.BusId.HasValue && d.PersistedGuid.HasValue).OrderBy(d => d.PersistedGuid.GetValueOrDefault()))
+        if (!connectedOnly)
         {
-            Debug.Assert(device.PersistedGuid.HasValue);
-            console.Out.Write($"{device.PersistedGuid.Value,-36:D}  ");
-            console.WriteTruncated(GetDescription(device, usbIds), 60, false);
+            console.Out.WriteLine("Persisted:");
+            console.Out.WriteLine($"{"GUID",-36}  DEVICE");
+            foreach (var device in allDevices.Where(d => !d.BusId.HasValue && d.PersistedGuid.HasValue).OrderBy(d => d.PersistedGuid.GetValueOrDefault()))
+            {
+                Debug.Assert(device.PersistedGuid.HasValue);
+                console.Out.Write($"{device.PersistedGuid.Value,-36:D}  ");
+                console.WriteTruncated(GetDescription(device, usbIds), 60, false);
+                console.Out.WriteLine();
+            }
             console.Out.WriteLine();
         }
-        console.Out.WriteLine();
 
         _ = console.CheckAndReportServerRunning(false);
         console.ReportIfForceNeeded();
@@ -496,7 +499,7 @@ sealed partial class CommandHandlers : ICommandHandlers
         });
         var json = JsonSerializer.Serialize(state, context.State);
 
-        await console.Out.WriteAsync(json);
+        await console.Out.WriteAsync(json, cancellationToken);
         return ExitCode.Success;
     }
 

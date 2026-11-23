@@ -41,7 +41,7 @@ sealed class CommandHandlersCli_Tests
         using var usbipdKey = TestRegistry.CreateSubKey(@"SOFTWARE\usbipd-win");
         usbipdKey.SetValue("APPLICATIONFOLDER", AppDomain.CurrentDomain.BaseDirectory);
 #pragma warning disable CS0436 // Type conflicts with imported type
-        usbipdKey.SetValue("Version", GitVersionInformation.MajorMinorPatch);
+        usbipdKey.SetValue("Version", ThisAssembly.NuGetPackageVersion);
 #pragma warning restore CS0436 // Type conflicts with imported type
         using var devicesKey = usbipdKey.CreateSubKey("Devices");
         using var policyKey = usbipdKey.CreateSubKey("Policy");
@@ -77,7 +77,7 @@ sealed class CommandHandlersCli_Tests
         var cli = (ICommandHandlers)new CommandHandlers();
         var console = new TestConsole();
 
-        await cli.List(false, console, TestContext.CancellationToken);
+        await cli.List(false, false, console, TestContext.CancellationToken);
     }
 
     [TestMethod]
@@ -86,7 +86,18 @@ sealed class CommandHandlersCli_Tests
         var cli = (ICommandHandlers)new CommandHandlers();
         var console = new TestConsole();
 
-        await cli.List(true, console, TestContext.CancellationToken);
+        await cli.List(true, false, console, TestContext.CancellationToken);
+    }
+
+    [TestMethod]
+    public async Task List_Connected()
+    {
+        var cli = (ICommandHandlers)new CommandHandlers();
+        var console = new TestConsole();
+
+        await cli.List(false, true, console, TestContext.CancellationToken);
+        Assert.Contains("Connected:", console.OutText);
+        Assert.DoesNotContain("Persisted:", console.OutText);
     }
 
     [TestMethod]

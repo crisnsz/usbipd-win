@@ -1,12 +1,21 @@
 {
   "sdk": {
+<<<<<<< HEAD
     "version": "10.0.302",
+=======
+    "version": "11.0.100",
+>>>>>>> upstream/master
     "allowPrerelease": false,
     "rollForward": "disable"
   },
   "msbuild-sdks": {
+<<<<<<< HEAD
     "MSTest.Sdk": "4.3.2",
     "WixToolset.Sdk": "7.0.0"
+=======
+    "MSTest.Sdk": "4.5.3",
+    "WixToolset.Sdk": "7.0.1"
+>>>>>>> upstream/master
   },
   "test": {
     "runner": "Microsoft.Testing.Platform"
